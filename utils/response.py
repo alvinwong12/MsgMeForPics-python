@@ -1,14 +1,25 @@
 from werkzeug import *
 
-def generateTwilioResponse(incomeSMS, media=None, param="mms"):
-
-	body = str(incomeSMS['Body']).strip()
+def generateTwilioResponse(sms, media=None):
+	body = "Here is a picture of %s" %sms['body']
+	if sms['param'].lower() == "sms" and media:
+		body += ". Media URL: %s" %str(media)
 
 	response = {
 		'body': body,
 		'media': media,
-		'respondTo': incomeSMS.get('From', False)	
 	}
 	
 	return response
 
+def generateMediaURL(media, size="medium"):
+	if not media: return None
+	SIZES = {
+		'small': 'm',
+		'square': 's',
+		'thumbnail': 't',
+		'medium': 'z',
+		'large': 'b'
+	}
+	mediaURL =  "https://farm%s.staticflickr.com/%s/%s_%s_%s.jpg" %(str(media['farm']), str(media['server']), str(media['id']), str(media['secret']), SIZES[size])
+	return mediaURL;
