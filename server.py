@@ -8,7 +8,7 @@ import os
 
 app = Flask(__name__)
 
-
+flickr_client = None
 
 def importTwilio():
 	import twilio as twilio
