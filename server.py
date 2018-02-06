@@ -8,7 +8,11 @@ import os
 
 app = Flask(__name__)
 
-flickr_client = None
+global flickr_client
+flickr_client = Flickr(api_key= os.environ['FLICKR_API_KEY'],
+              api_secret=os.environ['FLICKR_SECRET'],
+              oauth_token=os.environ['FLICKR_ACCESS_TOKEN'],
+              oauth_token_secret=os.environ['FLICKR_ACCESS_TOKEN_SECRET'])
 
 def importTwilio():
 	import twilio as twilio
@@ -63,12 +67,6 @@ def reply():
 
 
 if __name__ == "__main__":
-	global flickr_client
-	flickr_client = Flickr(api_key= os.environ['FLICKR_API_KEY'],
-              api_secret=os.environ['FLICKR_SECRET'],
-              oauth_token=os.environ['FLICKR_ACCESS_TOKEN'],
-              oauth_token_secret=os.environ['FLICKR_ACCESS_TOKEN_SECRET'])
-	
 	if os.environ['PYTHON_ENV'] == "development":
 		app.run(debug=True);
 	else:
