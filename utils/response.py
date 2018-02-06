@@ -4,6 +4,7 @@ def generateTwilioResponse(sms, media=None):
 	body = "Here is a picture of %s" %sms['body']
 	if sms['param'].lower() == "sms" and media:
 		body += ". Media URL: %s" %str(media)
+		media = None
 
 	response = {
 		'body': body,
