@@ -32,9 +32,8 @@ except:
 
 @app.route('/test', methods=['GET'])
 def test():
-	x = flickr_client.photosSearch(tags='python', per_page=1, page=1)
-
-	return str(x)
+	#x = flickr_client.photosSearch(tags='python', per_page=1, page=1)
+	return emoji()
 
 
 @app.route('/', methods=['GET'])
@@ -48,7 +47,7 @@ def reply():
 	smsValid = validateSMS(request.form)
 
 	if not smsValid:
-		resp.message("ERROR: Cannot search for a photo")
+		resp.message("Cannot search for a photo %s" %emoji("cry"))
 		return str(resp), 200, {'Content-Type':'text/xml'} 
 
 	sms = parseSMS(request.form)
