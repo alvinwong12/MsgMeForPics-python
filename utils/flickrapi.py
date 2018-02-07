@@ -19,13 +19,13 @@ class Flickr(object):
 			return None
 
 	def photoSearchRandom(self, **kvargs):
-		temp = kvargs
-		temp['per_page'] = 1
-		photos = self.photosSearch(**temp)
+		kvargs['per_page'] = 1
+		photos = self.photosSearch(**kvargs)
 		if not photos: return None 
 		total =int(photos['total'])
-		if total == 0: return None 
+		if total == 0: return None
+		# Flickr does not return more than 4000 unique photos
+		total = 4000 if total > 4000 else total
 		page = random.randint(1, total)
 		kvargs['page'] = page
-		kvargs['per_page'] = 1
 		return self.photosSearch(**kvargs)['photo'][0]
