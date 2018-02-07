@@ -4,7 +4,7 @@ def generateTwilioResponse(sms, media=None):
 	body = "Here is a picture of %s %s" %(sms['body'], emoji("happy"))
 	if not media:
 		body = "I found nothing %s" %emoji("cry")
-		
+
 	if sms['param'].lower() == "sms" and media:
 		body += ". Media URL: %s" %str(media)
 		media = None
@@ -35,5 +35,5 @@ def emoji(mood=None):
 		'no-emo': '1F636'
 	}
 	# Default return no expression face
-	emoji_str = "\U000%s" %EMOJI.get(mood.lower(), '1F636')
+	emoji_str = "\U000%s" %EMOJI.get(mood, '1F636')
 	return emoji_str.decode('unicode-escape')
