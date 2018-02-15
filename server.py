@@ -1,10 +1,14 @@
 from flask import Flask, request
-from utils.response import *
+from utils.task import *
 from utils.validate import *
 from utils.parse import *
 from utils.flickrapi import Flickr
+from utils.response import Response
 import subprocess
 import os
+import boto3
+from utils.model import DynamoDB
+from decimal import *
 
 app = Flask(__name__)
 
@@ -13,6 +17,9 @@ flickr_client = Flickr(api_key= os.environ['FLICKR_API_KEY'],
               api_secret=os.environ['FLICKR_SECRET'],
               oauth_token=os.environ['FLICKR_ACCESS_TOKEN'],
               oauth_token_secret=os.environ['FLICKR_ACCESS_TOKEN_SECRET'])
+
+global dynamodb
+dynamodb = DynamoDB()
 
 def importTwilio():
 	import twilio as twilio
@@ -33,12 +40,12 @@ except:
 @app.route('/test', methods=['GET'])
 def test():
 	#x = flickr_client.photosSearch(tags='python', per_page=1, page=1)
-	return emoji()
+	return Response.emoji()
 
 
 @app.route('/', methods=['GET'])
 def index():
-	return "MsgMeForPics 1.0.0"
+	return "MsgMeForPics 2.0.0"
 
 
 @app.route('/sms', methods=["POST"])
@@ -47,16 +54,17 @@ def reply():
 	smsValid = validateSMS(request.form)
 
 	if not smsValid:
-		resp.message("Cannot search for a photo %s" %emoji("cry"))
+		resp.message("Cannot search for a photo %s" %Response.emoji("cry"))
 		return str(resp), 200, {'Content-Type':'text/xml'} 
 
 	sms = parseSMS(request.form)
-	
-	photo = flickr_client.photoSearchRandom(tags=sms['body'], media='photos')
-	#media = photos['photos']['photo'][0]
-	mediaURL = generateMediaURL(photo)
 
-	res = generateTwilioResponse(sms, mediaURL)
+	### Choose Photo
+	selected_photo = SelectPhotoTask.RunNormal(dynamodb, flickr_client, sms)
+	# selected_photo = SelectPhotoTask.RunRandom(flickr_client, sms) # for random pics
+
+	### 
+	res = Response.generateTwilioResponse(sms, selected_photo)
 	# Add a message
 	msg = resp.message(res['body'])
 	if res.get('media', None):

@@ -6,6 +6,7 @@ def parseSMS(incomeSMS):
 	param = splited_msg[1].strip() if len(splited_msg) > 1  else "mms"
 	sms = {
 		'body': splited_msg[0].strip(),
-		'param': param
+		'param': param,
+    'From': incomeSMS['From']
 	}
 	return sms
