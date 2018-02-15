@@ -17,7 +17,7 @@ class SelectPhotoTask(Task):
 		kce = Key('phone').eq(sms['From'])
 		fe = Attr('tag').eq(sms['body'])
 		history = database.query_user_history(kce, fe)
-		history_id = 1 if history['Count'] == 0 else history['Items'][0]['id']
+		history_id = 0 if history['Count'] == 0 else history['Items'][0]['id']
 		return history, history_id
 
 	@staticmethod
@@ -81,7 +81,7 @@ class SelectPhotoTask(Task):
 			photo = SelectPhotoTask.get_photo(dynamodb, sms, history)
 			photo_history = SelectPhotoTask.get_photo_history(dynamodb, sms)
 			# make sure access id doesnt go over photoid
-			id = history[1] + 1
+			id = history[1] + 1 # new id
 			if photo_history['Items'] and photo_history['Items'][0]['id']:
 				id = history[1] if history[1] >= photo_history['Items'][0]['id'] else id
 			# update
