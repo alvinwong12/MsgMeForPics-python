@@ -46,7 +46,6 @@ class DynamoDB(object):
     }
     if not prevent_ow_attr:
       del params['ConditionExpression']
-    #ConditionExpression=Attr('url').not_exists()
     response = table.put_item(**params )
     return response
 

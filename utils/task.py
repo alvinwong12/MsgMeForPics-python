@@ -2,14 +2,29 @@ from werkzeug import *
 from boto3.dynamodb.conditions import Key, Attr
 from response import Response
 import random
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
+logger = logging.getLogger(__name__)
+timeFileHandler = TimedRotatingFileHandler("logs/access.log", when="h", interval=1, backupCount=1)
+timeFileHandler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+timeFileHandler.setFormatter(formatter)
+logger.addHandler(timeFileHandler)
+
+# Entire file needs to be refactored
+
+# task object: stores all variables and methods which are purpose-specific
+# Template - to be further implemented with template functions
 class Task(object):
 	def __init__(self):
-		pass
+		logger.info("Task created")
 
 	def Run(self):
-		pass
+		logger.info("Start task run")
 
+
+# Refactor to remove all static methods
 class SelectPhotoTask(Task):
 	@staticmethod
 	def get_history(database, sms):
@@ -18,7 +33,7 @@ class SelectPhotoTask(Task):
 		fe = Attr('tag').eq(sms['body'])
 		history = database.query_user_history(kce, fe)
 		history_id = 0 if history['Count'] == 0 else history['Items'][0]['id']
-		return history, history_id
+		return history, history_id	# Can be done better
 
 	@staticmethod
 	def get_photo(database, sms, history):
@@ -31,26 +46,43 @@ class SelectPhotoTask(Task):
 		photo_history = database.query_photo_history(kce)
 		return photo_history
 
+	# method code can be cleaner, needs further refactoring
+	# most important method, logging here
+	'''
+	Cases:
+		1. No photo with the specified tag
+		2. Trying to fetch a photo with id higher than how many photo are there
+		3. A user almost fetched all photo of that tag
+		4. None of the above edge cases
+	'''
 	@staticmethod
 	def choose_photo(database, photo_search_client, photo, photo_history, sms, history):
 		if photo['Count'] == 0 and photo_history['Count'] == 0:
 			# search photo, return first photo, write all to dynamodb (background)
+			logger.critical("Case 1")
 			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=500, page=SelectPhotoTask.randnum(8))
 			SelectPhotoTask.store_all_photos(database, new_photos, sms['body']) # to be ran in background
+			logger.info("Photo fetched from database %s" %str(Response.generateMediaURL(new_photos['photo'][0])))
 			return Response.generateMediaURL(new_photos['photo'][0])
 		elif history[1] >= photo_history['Items'][0]['id']:
 			# choose random from existing
+			logger.critical("Case 2")
 			kce = Key('tag').eq(sms['body']) & Key('id').eq(SelectPhotoTask.randnum(photo_history['Items'][0]['id']))
 			photo = database.query_photo(kce)
+			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
 			return photo['Items'][0]['url']
 		elif photo_history['Items'][0]['id'] - 5 <= history[1] + 1:
 			# almost got all the photos, return,  get more photos (background)
+			logger.critical("Case 3")
 			id = photo_history['Items'][0]['id'] + 1
 			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=500, page=SelectPhotoTask.randnum(8))
 			SelectPhotoTask.store_all_photos(database, new_photos, sms['body'], id) # to be ran in background
+			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
 			return photo['Items'][0]['url']
 		else:
 			# just return photo
+			logger.critical("Case 4")
+			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
 			return photo['Items'][0]['url']
 
 	@staticmethod
@@ -75,6 +107,7 @@ class SelectPhotoTask(Task):
 
 	@staticmethod
 	def RunNormal(dynamodb, flickr_client, sms):
+		logger.info("Normal task running")
 		try:
 			# Get History
 			history = SelectPhotoTask.get_history(dynamodb, sms)# history object contains: entire history object, id
@@ -89,7 +122,7 @@ class SelectPhotoTask(Task):
 			selected_photo = SelectPhotoTask.choose_photo(dynamodb, flickr_client, photo, photo_history, sms, history)
 			return selected_photo
 		except Exception as e:
-			print str(e)
+			logger.exception(str(e))
 			return None
 
 	@staticmethod
