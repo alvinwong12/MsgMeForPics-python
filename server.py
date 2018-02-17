@@ -1,10 +1,15 @@
+import os
+try:
+	os.mkdir( "logs", 0777 );
+except:
+	pass
+	
 from flask import Flask, request
 from utils.task import *
 from utils.validate import *
 from utils.parse import *
 from utils.flickrapi import Flickr
 from utils.response import Response
-import os
 import boto3
 from utils.model import DynamoDB
 from decimal import *
