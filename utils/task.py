@@ -3,14 +3,8 @@ from boto3.dynamodb.conditions import Key, Attr
 from response import Response
 import random
 import logging
-from logging.handlers import TimedRotatingFileHandler
 
 logger = logging.getLogger(__name__)
-timeFileHandler = TimedRotatingFileHandler("logs/access.log", when="h", interval=1, backupCount=1)
-timeFileHandler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-timeFileHandler.setFormatter(formatter)
-logger.addHandler(timeFileHandler)
 
 # Entire file needs to be refactored
 
@@ -22,6 +16,11 @@ class Task(object):
 
 	def Run(self):
 		logger.info("Start task run")
+
+class BackgroundTask(Task):
+	@staticmethod
+	def RunMethod():
+		pass
 
 
 # Refactor to remove all static methods
@@ -60,7 +59,7 @@ class SelectPhotoTask(Task):
 		if photo['Count'] == 0 and photo_history['Count'] == 0:
 			# search photo, return first photo, write all to dynamodb (background)
 			logger.critical("Case 1")
-			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=500, page=SelectPhotoTask.randnum(8))
+			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=1, page=SelectPhotoTask.randnum(8))
 			SelectPhotoTask.store_all_photos(database, new_photos, sms['body']) # to be ran in background
 			logger.info("Photo fetched from database %s" %str(Response.generateMediaURL(new_photos['photo'][0])))
 			return Response.generateMediaURL(new_photos['photo'][0])
@@ -75,7 +74,7 @@ class SelectPhotoTask(Task):
 			# almost got all the photos, return,  get more photos (background)
 			logger.critical("Case 3")
 			id = photo_history['Items'][0]['id'] + 1
-			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=500, page=SelectPhotoTask.randnum(8))
+			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=1, page=SelectPhotoTask.randnum(8))
 			SelectPhotoTask.store_all_photos(database, new_photos, sms['body'], id) # to be ran in background
 			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
 			return photo['Items'][0]['url']
@@ -127,4 +126,8 @@ class SelectPhotoTask(Task):
 
 	@staticmethod
 	def RunRandom(flickr_client, sms):
-		return SelectPhotoTask.choose_random_photo(flickr_client, sms)
+		try:
+			return SelectPhotoTask.choose_random_photo(flickr_client, sms)
+		except Exception as e:
+			logger.exception(str(e))
+			return None

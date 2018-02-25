@@ -29,20 +29,32 @@ flickr_client = Flickr(api_key= os.environ['FLICKR_API_KEY'],
 global dynamodb
 dynamodb = DynamoDB()
 
+# Celery
+from celery import Celery
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+##
+
 ## Logging
-logger = logging.getLogger('werkzeug')
-timeFileHandler = TimedRotatingFileHandler("logs/access.log", when="h", interval=1, backupCount=1)
+logging.basicConfig(level=logging.INFO, datefmt='%m/%d/%Y %I:%M:%S %p', format='%(asctime)s - %(levelname)s - %(message)s')
+root = logging.getLogger()
+timeFileHandler = TimedRotatingFileHandler("logs/access.log", when="D", interval=1)
 timeFileHandler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 timeFileHandler.setFormatter(formatter)
-app.logger.setLevel(logging.DEBUG)
-logger.addHandler(timeFileHandler)
+sh = logging.StreamHandler()
+sh.setFormatter(formatter)
+app.logger.addHandler(sh)
 app.logger.addHandler(timeFileHandler)
-
+root.addHandler(timeFileHandler)
 
 @app.route('/test', methods=['GET'])
 def test():
 	#x = flickr_client.photosSearch(tags='python', per_page=1, page=1)
+	app.logger.info("hi")
 	return Response.emoji()
 
 
@@ -77,13 +89,10 @@ def reply():
 		msg.media(res['media'])
 
 	app.logger.info("Replying to %s with %s" %(res['from'], str(resp)))
-	return str(resp), 200, {'Content-Type':'text/xml'} 
-
+	return str(resp), 200, {'Content-Type':'text/xml'}
 
 if __name__ == "__main__":
 	if os.environ['PYTHON_ENV'] == "development":
-		app.run(debug=True)
-		app.logger.info("Local server running")
+		app.run()
 	else:
 		app.run(host = "0.0.0.0", debug=False)
-		app.logger.info("Production server running")
