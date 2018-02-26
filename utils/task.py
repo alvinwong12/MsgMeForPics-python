@@ -30,6 +30,7 @@ class StoreAllPhotos(celery.task.Task):
 			except:
 				continue
 			id += 1
+		logger.info("All images for %s is stored to database" %tag)
 
 tasks.register(StoreAllPhotos)
 
