@@ -1,6 +1,11 @@
 import flickr
 import random
 
+from config import Config
+
+parser = Config().getParser()
+parser.read('config/server.ini')
+
 class Flickr(object):
 	def __init__(self, api_key, api_secret, oauth_token=None, oauth_token_secret=None):
 		self.api_key = api_key
@@ -25,7 +30,7 @@ class Flickr(object):
 		total =int(photos['total'])
 		if total == 0: return None
 		# Flickr does not return more than 4000 unique photos
-		total = 4000 if total > 4000 else total
+		total = int(parser.get('flickr', 'max_results')) if total > int(parser.get('flickr', 'max_results')) else total
 		page = random.randint(1, total)
 		kvargs['page'] = page
 		return self.photosSearch(**kvargs)['photo'][0]
