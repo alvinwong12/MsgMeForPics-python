@@ -2,6 +2,7 @@ from flask import Flask, request
 from celery import Celery
 from utils.config import Config
 from utils.model import DynamoDB
+from utils.cache import Cache
 import os
 parser = Config().getParser()
 parser.read('config/server.ini')
@@ -16,6 +17,7 @@ celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
 
 dynamodb = DynamoDB()
+cache = Cache()
 
 def getFlask():
   return app
@@ -25,3 +27,6 @@ def getCelery():
 
 def getDynamodb():
   return dynamodb
+
+def getCache():
+  return cache
