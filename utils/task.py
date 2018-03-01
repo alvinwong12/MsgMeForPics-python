@@ -4,8 +4,9 @@ from response import Response
 import random
 import logging
 from config import Config
-from init import getCelery, getDynamodb
+from init import getCelery, getDynamodb, getCache
 celery = getCelery()
+cache = getCache()
 
 parser = Config().getParser()
 parser.read('config/server.ini')
@@ -49,6 +50,14 @@ class Task(object):
 # Refactor to remove all static methods
 class SelectPhotoTask(Task):
 	@staticmethod
+	def generateCacheKey(tag, id):
+		return "%s%s" %(str(tag), str(id))
+
+	@staticmethod
+	def checkCache(key):
+		return cache.read(key)
+
+	@staticmethod
 	def get_history(sms):
 		# Get History
 		kce = Key('phone').eq(sms['From'])
@@ -59,8 +68,18 @@ class SelectPhotoTask(Task):
 
 	@staticmethod
 	def get_photo(sms, history):
-		kce = Key('tag').eq(sms['body']) & Key('id').eq(history[1] + 1)
-		return database.query_photo(kce)
+ 		cache_photo = SelectPhotoTask.checkCache(SelectPhotoTask.generateCacheKey(sms['body'], history[1] + 1))
+		if cache_photo:
+			logger.critical("CACHE HIT - %s" %cache_photo)
+			return cache_photo
+		else:
+			kce = Key('tag').eq(sms['body']) & Key('id').eq(history[1] + 1)
+			photo = database.query_photo(kce)
+			if photo['Count'] == 0:
+				return None
+			else:
+				cache.write(SelectPhotoTask.generateCacheKey(sms['body'], history[1]+1), photo['Items'][0]['url'])
+				return photo['Items'][0]['url']
 
 	@staticmethod
 	def get_photo_history(sms):
@@ -79,22 +98,29 @@ class SelectPhotoTask(Task):
 	'''
 	@staticmethod
 	def choose_photo(photo_search_client, photo, photo_history, sms, history):
-		if photo['Count'] == 0 and photo_history['Count'] == 0:
+		if not photo and photo_history['Count'] == 0:
 			# search photo, return first photo, write all to dynamodb (background)
 			logger.critical("Case 1")
 			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=int(parser.get('flickr', 'per_page')), page=SelectPhotoTask.randnum(int(parser.get('flickr', 'max_results')) / int(parser.get('flickr', 'per_page')) ))
 			#SelectPhotoTask.store_all_photos(database, new_photos, sms['body']) # to be ran in background
 			task = StoreAllPhotos.delay(new_photos, sms['body'])
-			print task
 			#####
 			logger.info("Photo fetched from database %s" %str(Response.generateMediaURL(new_photos['photo'][0])))
+			cache.write(SelectPhotoTask.generateCacheKey(sms['body'], 1), Response.generateMediaURL(new_photos['photo'][0]))
 			return Response.generateMediaURL(new_photos['photo'][0])
 		elif history[1] >= photo_history['Items'][0]['id']:
 			# choose random from existing
 			logger.critical("Case 2")
-			kce = Key('tag').eq(sms['body']) & Key('id').eq(SelectPhotoTask.randnum(photo_history['Items'][0]['id']))
+			randid = SelectPhotoTask.randnum(photo_history['Items'][0]['id'])
+			# cache first
+			cache_photo = SelectPhotoTask.checkCache(SelectPhotoTask.generateCacheKey(sms['body'], randid))
+			if cache_photo:
+				return cache_photo
+			#####
+			kce = Key('tag').eq(sms['body']) & Key('id').eq(randid)
 			photo = database.query_photo(kce)
 			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
+			cache.write(SelectPhotoTask.generateCacheKey(sms['body'], randid), photo['Items'][0]['url'])
 			return photo['Items'][0]['url']
 		elif photo_history['Items'][0]['id'] - 5 <= history[1] + 1:
 			# almost got all the photos, return,  get more photos (background)
@@ -103,13 +129,13 @@ class SelectPhotoTask(Task):
 			new_photos = photo_search_client.photosSearch(tags=sms['body'], per_page=int(parser.get('flickr', 'per_page')), page=SelectPhotoTask.randnum(int(parser.get('flickr', 'max_results')) / int(parser.get('flickr', 'per_page')) ))
 			# SelectPhotoTask.store_all_photos(database, new_photos, sms['body'], id) # to be ran in background
 			StoreAllPhotos.delay(new_photos, sms['body'], id)
-			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
-			return photo['Items'][0]['url']
+			logger.info("Photo fetched from database %s" %str(photo))
+			return photo
 		else:
 			# just return photo
 			logger.critical("Case 4")
-			logger.info("Photo fetched from database %s" %str(photo['Items'][0]['url']))
-			return photo['Items'][0]['url']
+			logger.info("Photo fetched from database %s" %str(photo))
+			return photo
 
 	@staticmethod
 	def choose_random_photo(photo_search_client, sms):
@@ -145,6 +171,7 @@ class SelectPhotoTask(Task):
 	@staticmethod
 	def RunRandom(flickr_client, sms):
 		try:
+			# save to cache
 			return SelectPhotoTask.choose_random_photo(flickr_client, sms)
 		except Exception as e:
 			logger.exception(str(e))
