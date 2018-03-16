@@ -4,9 +4,10 @@ from response import Response
 import random
 import logging
 from config import Config
-from init import getCelery, getDynamodb, getCache
+from init import getCelery, getDynamodb, getCache, getImageValidator
 celery = getCelery()
 cache = getCache()
+image_validator = getImageValidator()
 
 parser = Config().getParser()
 parser.read('config/server.ini')
@@ -27,7 +28,11 @@ class StoreAllPhotos(celery.task.Task):
 		for photo in photos['photo']:
 			url = Response.generateMediaURL(photo)
 			try:
-				database.write_item("Pictures", "url", tag=tag, id=id, url=url)
+				valid = image_validator.validate(tag, url)
+				if valid == 1 or valid == -1:
+					database.write_item("Pictures", "url", tag=tag, id=id, url=url)
+				else:
+					raise
 			except:
 				continue
 			id += 1
@@ -63,7 +68,7 @@ class SelectPhotoTask(Task):
 		kce = Key('phone').eq(sms['From'])
 		fe = Attr('tag').eq(sms['body'])
 		history = database.query_user_history(kce, fe)
-		history_id = 0 if history['Count'] == 0 else history['Items'][0]['id']
+		history_id = 0 if history['Count'] <= 0 else history['Items'][0]['id']
 		return history, history_id	# Can be done better
 
 	@staticmethod
