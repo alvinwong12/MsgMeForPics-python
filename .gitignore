@@ -1,3 +1,5 @@
 dev/
 logs/*
 backup/*
+*.pyc
+config/gcloud_credential.json
