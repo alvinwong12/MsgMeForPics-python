@@ -3,6 +3,7 @@ from celery import Celery
 from utils.config import Config
 from utils.model import DynamoDB
 from utils.cache import Cache
+from utils.validate import ValidateImage
 import os
 parser = Config().getParser()
 parser.read('config/server.ini')
@@ -18,6 +19,7 @@ celery.conf.update(app.config)
 
 dynamodb = DynamoDB()
 cache = Cache()
+image_validator = ValidateImage()
 
 def getFlask():
   return app
@@ -30,3 +32,6 @@ def getDynamodb():
 
 def getCache():
   return cache
+
+def getImageValidator():
+  return image_validator
