@@ -4,7 +4,7 @@ try:
 except:
 	pass
 	
-from flask import request
+from flask import request, render_template
 # app = Flask(__name__)
 
 from init import getFlask, getCelery, getDynamodb
@@ -17,6 +17,7 @@ from utils.validate import *
 from utils.parse import *
 from utils.flickrapi import Flickr
 from utils.response import Response
+from utils.validate import ValidateUser
 import boto3
 # from utils.model import DynamoDB
 from decimal import *
@@ -29,6 +30,8 @@ from utils.config import Config
 parser = Config().getParser()
 parser.read('config/server.ini')
 
+import json
+import requests
 
 
 global flickr_client
@@ -39,6 +42,9 @@ flickr_client = Flickr(api_key= os.environ['FLICKR_API_KEY'],
 
 global dynamodb
 dynamodb = getDynamodb()
+
+global authorize
+authorize = ValidateUser()
 
 # Celery
 # from celery import Celery
@@ -64,21 +70,24 @@ root.addHandler(timeFileHandler)
 
 @app.route('/test', methods=['GET'])
 def test():
-	#x = flickr_client.photosSearch(tags='python', per_page=1, page=1)
 	return Response.emoji()
 
 
 @app.route('/', methods=['GET'])
 def index():
-	return "MsgMeForPics v2.2"
+	return "MsgMeForPics v3.3"
 
 
 @app.route('/sms', methods=["POST"])
 def reply():
 	app.logger.info("Inbound sms: %s" %str(request.form))
+	# valiate user
+	success = authorize.validate(str(request.form.get('From', None)))
+	if not success:
+		return abort(401)
+
 	resp = MessagingResponse()
 	smsValid = validateSMS(request.form)
-
 	if not smsValid:
 		app.logger.error("Inbound sms validation failed")
 		resp.message("Cannot search for a photo %s" %Response.emoji("cry"))
@@ -100,6 +109,35 @@ def reply():
 
 	app.logger.info("Replying to %s with %s" %(res['from'], str(resp)))
 	return str(resp), 200, {'Content-Type':'text/xml'}
+
+@app.route('/addpermission', methods=["POST"])
+def add():
+	user = str(request.form.get('user', None))
+	if user == 'all':
+		success = authorize.addAllPermission()
+	else:
+		success = authorize.addPermission(user)
+	return str( json.dumps({'success': success}) ), 200, {'Content-Type': 'application/json'}
+
+@app.route('/removepermission', methods=["POST"])
+def remove():
+	user = str(request.form.get('user', None))
+	if user == 'all':
+		success = authorize.removeAllPermission()
+	else:
+		success = authorize.removePermission(user)
+	return str( json.dumps({'success': success}) ), 200, {'Content-Type': 'application/json'}
+
+@app.route('/admin/<action>', methods=["GET"])
+def admin(action):
+	base_url = request.url_root
+	if action.lower() == "add":
+		return render_template('admin/show.html', post_url="%saddpermission" %base_url, action=action)
+	elif action.lower() == "remove":
+		return render_template('admin/show.html', post_url="%sremovepermission" %base_url, action=action)
+	else:
+		return abort(400)
+
 
 if __name__ == "__main__":
 	if os.environ['PYTHON_ENV'] == "development":

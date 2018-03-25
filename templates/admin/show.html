@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+</head>
+<body>
+  <h1>{{ action.capitalize() + " permission" }}</h1>
+   <form action={{ post_url }} method ="post">
+      <input type="text" name=user />
+      <input type="submit" value={{ action.capitalize() }} />
+   </form>
+</body>
+</html>
