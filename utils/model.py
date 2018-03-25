@@ -97,7 +97,7 @@ class MySQL(object):
     if os.environ['PYTHON_ENV'] == "development":
       url = os.environ['mysql_msgmeforpics']
     else:
-      url = os.environ['CLEARDB_DATABASE_URL']
+      url = os.environ['JAWSDB_URL']
 
     url = urlparse.urlparse(url)
 
