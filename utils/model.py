@@ -1,5 +1,8 @@
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
+import MySQLdb
+import urlparse
+import os
 
 class DynamoDB(object):
   def __init__(self, region='us-east-1', endpoint=None):
@@ -88,3 +91,45 @@ class DynamoDB(object):
   def query_photo_history(self, kce=None, fe=None):
     res = self.query("Pictures", kce=kce, fe=fe, index="Photo_ID")
     return res
+
+class MySQL(object):
+  def __init__(self):
+    if os.environ['PYTHON_ENV'] == "development":
+      url = os.environ['mysql_msgmeforpics']
+    else:
+      url = os.environ['CLEARDB_DATABASE_URL']
+
+    url = urlparse.urlparse(url)
+
+    self.db = MySQLdb.connect(
+        host=url.hostname,
+        user=url.username,
+        passwd=url.password,
+        db=url.path[1:]
+      )
+    self.cursor = self.db.cursor()
+
+  def readOperation(self,query):
+    try:
+      self.cursor.execute(query)
+      return self.cursor.fetchall()
+    except Exception as e:
+      # log
+      return None
+
+  def writeOperation(self,query):
+    try:
+      self.cursor.execute(query)
+      self.db.commit()
+      return True
+    except Exception as e:
+      #log
+      print str(e)
+      self.db.rollback()
+      return False
+
+  def __del__(self):
+    self.db.close()
+
+  def cursor(self):
+    return self.cursor
