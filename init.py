@@ -4,6 +4,7 @@ from utils.config import Config
 from utils.model import DynamoDB
 from utils.cache import Cache
 from utils.validate import ValidateImage
+from utils.ratelimiter import RateLimiter
 import os
 parser = Config().getParser()
 parser.read('config/server.ini')
@@ -20,6 +21,7 @@ celery.conf.update(app.config)
 dynamodb = DynamoDB()
 cache = Cache()
 image_validator = ValidateImage()
+rateLimiter = RateLimiter()
 
 def getFlask():
   return app
@@ -35,3 +37,6 @@ def getCache():
 
 def getImageValidator():
   return image_validator
+
+def getRateLimiter():
+  return rateLimiter

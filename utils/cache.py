@@ -9,7 +9,7 @@ class Cache(object):
     self.parser = Config().getParser()
     self.parser.read('config/server.ini')
     if os.environ['PYTHON_ENV'] == "development":
-      self.redis_url = self.parser.get('redis', 'url')
+      self.redis_url = self.parser.get('redis', 'cache')
     else:
       self.redis_url = os.environ['HEROKU_REDIS_NAVY_URL']
     self.cache_server = redis.from_url(self.redis_url)

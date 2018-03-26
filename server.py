@@ -7,7 +7,7 @@ except:
 from flask import request, render_template
 # app = Flask(__name__)
 
-from init import getFlask, getCelery, getDynamodb
+from init import getFlask, getCelery, getDynamodb, getRateLimiter
 app = getFlask()
 
 celery = getCelery()
@@ -45,6 +45,9 @@ dynamodb = getDynamodb()
 
 global authorize
 authorize = ValidateUser()
+
+global rateLimiter
+rateLimiter = getRateLimiter()
 
 # Celery
 # from celery import Celery
@@ -86,6 +89,15 @@ def reply():
 	if not success:
 		return abort(401)
 
+	# Rate limited
+	user = str(request.form.get('From', None))
+	if not rateLimiter.check(user):
+		rateLimiter.new_user(user)
+	request_premitted = rateLimiter.consume(user, 1)
+	if not request_premitted:
+		return "Rate limited. Try again in several minutes", 400
+
+	# actual response
 	resp = MessagingResponse()
 	smsValid = validateSMS(request.form)
 	if not smsValid:

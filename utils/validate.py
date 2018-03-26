@@ -56,7 +56,6 @@ class ValidateImage(object):
         return 1
     return 0
 
-import code; 
 class ValidateUser(object):
   def __init__(self):
     self.db = MySQL()
@@ -65,13 +64,11 @@ class ValidateUser(object):
   def validate(self, user):
     user = self.find(user)
     if user:
-      # code.interact(local=dict(globals(), **locals()))
       return bool(user[2]) or self.allPermitted()
     else:
       return False
 
   def addPermission(self, user):
-    # code.interact(local=dict(globals(), **locals()))
     record = self.find(user)
     if record:
       query = "UPDATE %s SET verified=1 WHERE phone=%s" %(self.table, user)
@@ -122,6 +119,6 @@ class ValidateUser(object):
       return False
 
 if __name__ == "__main__":
-  user = "+16479870829"
+  user = "test"
   v = ValidateUser()
   print v.removeAllPermission()
