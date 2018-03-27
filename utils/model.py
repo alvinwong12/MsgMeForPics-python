@@ -111,9 +111,9 @@ class MySQL(object):
       )
     self.cursor = self.db.cursor()
 
-  def readOperation(self,query):
+  def readOperation(self,query, variables=()):
     try:
-      self.cursor.execute(query)
+      self.cursor.execute(query, variables)
       return self.cursor.fetchall()
     except Exception as e:
       # log
