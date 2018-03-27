@@ -3,6 +3,8 @@ from boto3.dynamodb.conditions import Key, Attr
 import MySQLdb
 import urlparse
 import os
+import logging
+logger = logging.getLogger(__name__)
 
 class DynamoDB(object):
   def __init__(self, region='us-east-1', endpoint=None):
@@ -115,6 +117,7 @@ class MySQL(object):
       return self.cursor.fetchall()
     except Exception as e:
       # log
+      logger.exception(str(e))
       return None
 
   def writeOperation(self,query):
@@ -124,11 +127,12 @@ class MySQL(object):
       return True
     except Exception as e:
       #log
-      print str(e)
+      logger.exception(str(e))
       self.db.rollback()
       return False
 
   def __del__(self):
+    logger.warning("MySQL server connection closed")
     self.db.close()
 
   def cursor(self):
