@@ -64,7 +64,7 @@ class ValidateUser(object):
   def validate(self, user):
     user = self.find(user)
     if user:
-      return bool(user[2]) or self.allPermitted()
+      return bool(user[2]) or self.anyPermitted()
     else:
       return False
 
@@ -111,8 +111,8 @@ class ValidateUser(object):
     except Exception as e:
       return False
 
-  def allPermitted(self):
-    user = self.find("all")
+  def anyPermitted(self):
+    user = self.find("any")
     if user:
       return bool(user[2])
     else:

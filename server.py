@@ -87,14 +87,18 @@ def reply():
 	# valiate user
 	success = authorize.validate(str(request.form.get('From', None)))
 	if not success:
+		app.logger.error(str(request.form.get('From', None)) + "not authorized")
 		return abort(401)
+	app.logger.info(str(request.form.get('From', None)) + "authorized")
 
 	# Rate limited
 	user = str(request.form.get('From', None))
 	if not rateLimiter.check(user):
 		rateLimiter.new_user(user)
 	request_premitted = rateLimiter.consume(user, 1)
+
 	if not request_premitted:
+		app.logger.error("%s is rate limited" %user)
 		return "Rate limited. Try again in several minutes", 400
 
 	# actual response
