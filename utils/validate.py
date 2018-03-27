@@ -73,18 +73,18 @@ class ValidateUser(object):
   def addPermission(self, user):
     record = self.find(user)
     if record:
-      query = "UPDATE %s SET verified=1 WHERE phone=%s" %(self.table, user)
+      query = "UPDATE %s SET verified=1 WHERE phone=%s" ,(self.table, str(user))
       # update
       return self.db.writeOperation(query)
     else:
       # add
-      query = "INSERT INTO %s(PHONE, VERIFIED) VALUES (%s, 1)" %(self.table, user)
+      query = "INSERT INTO %s(PHONE, VERIFIED) VALUES (%s, 1)" ,(self.table, str(user))
       return self.db.writeOperation(query)
 
   def removePermission(self, user):
     record = self.find(user)
     if record:
-      query = "UPDATE %s SET verified=0 WHERE phone=%s" %(self.table, user)
+      query = "UPDATE %s SET verified=0 WHERE phone=%s" ,(self.table, str(user))
       # update
       return self.db.writeOperation(query)
     else:
@@ -92,7 +92,7 @@ class ValidateUser(object):
 
   def find(self, user):
     try:
-      query = "SELECT * FROM %s WHERE phone=%s" %(self.table, user)
+      query = "SELECT * FROM %s WHERE phone=%s" ,(self.table, str(user))
       result = self.db.readOperation(query)
       return result[0]
     except Exception as e:
@@ -102,7 +102,7 @@ class ValidateUser(object):
 
   def removeAllPermission(self):
     try:
-      query = "UPDATE %s SET verified=0" %(self.table)
+      query = "UPDATE %s SET verified=0" %self.table
       return self.db.writeOperation(query)
     except Exception as e:
       logger.exception(str(e))
@@ -110,7 +110,7 @@ class ValidateUser(object):
 
   def addAllPermission(self):
     try:
-      query = "UPDATE %s SET verified=1" %(self.table)
+      query = "UPDATE %s SET verified=1" % self.table
       return self.db.writeOperation(query)
     except Exception as e:
       logger.exception(str(e))
@@ -124,6 +124,6 @@ class ValidateUser(object):
       return False
 
 if __name__ == "__main__":
-  user = "test"
+  user = "public"
   v = ValidateUser()
   print v.removeAllPermission()
