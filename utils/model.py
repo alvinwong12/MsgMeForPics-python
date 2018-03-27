@@ -93,7 +93,7 @@ class DynamoDB(object):
   def query_photo_history(self, kce=None, fe=None):
     res = self.query("Pictures", kce=kce, fe=fe, index="Photo_ID")
     return res
-
+import code
 class MySQL(object):
   def __init__(self):
     if os.environ['PYTHON_ENV'] == "development":
@@ -120,9 +120,10 @@ class MySQL(object):
       logger.exception(str(e))
       return None
 
-  def writeOperation(self,query):
+  def writeOperation(self,query, variables=()):
     try:
-      self.cursor.execute(query)
+      # code.interact(local=dict(globals(), **locals()))
+      self.cursor.execute(query, variables)
       self.db.commit()
       return True
     except Exception as e:

@@ -73,27 +73,29 @@ class ValidateUser(object):
   def addPermission(self, user):
     record = self.find(user)
     if record:
-      query = "UPDATE %s SET verified=1 WHERE phone=%s" ,(self.table, str(user))
+      query = "UPDATE " + self.table + " SET verified=1 WHERE phone=%s"
       # update
-      return self.db.writeOperation(query)
     else:
       # add
-      query = "INSERT INTO %s(PHONE, VERIFIED) VALUES (%s, 1)" ,(self.table, str(user))
-      return self.db.writeOperation(query)
+      query = "INSERT INTO " + self.table + " (PHONE, VERIFIED) VALUES (%s, 1)"
+    var = (str(user),)
+    return self.db.writeOperation(query, var)
 
   def removePermission(self, user):
     record = self.find(user)
     if record:
-      query = "UPDATE %s SET verified=0 WHERE phone=%s" ,(self.table, str(user))
+      query = "UPDATE " + self.table + " SET verified=0 WHERE phone=%s"
       # update
-      return self.db.writeOperation(query)
+      var = (str(user),)
+      return self.db.writeOperation(query, var)
     else:
       return False
 
   def find(self, user):
     try:
-      query = "SELECT * FROM %s WHERE phone=%s" ,(self.table, str(user))
-      result = self.db.readOperation(query)
+      query = "SELECT * FROM " + self.table + " WHERE phone=%s"
+      var = (str(user),)
+      result = self.db.readOperation(query, var)
       return result[0]
     except Exception as e:
       # log
@@ -126,4 +128,4 @@ class ValidateUser(object):
 if __name__ == "__main__":
   user = "public"
   v = ValidateUser()
-  print v.removeAllPermission()
+  print v.addPermission(user)
