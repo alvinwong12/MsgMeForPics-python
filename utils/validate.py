@@ -3,6 +3,8 @@ from pattern.en import wordnet, NOUN, singularize
 import google.cloud.vision
 import requests
 from model import MySQL
+import logging
+logger = logging.getLogger(__name__)
 
 def validateSMS(incomeSMS):
 	if not ('Body' in incomeSMS):
@@ -64,7 +66,7 @@ class ValidateUser(object):
   def validate(self, user):
     user = self.find(user)
     if user:
-      return bool(user[2]) or self.anyPermitted()
+      return bool(user[2]) or self.publicPermitted()
     else:
       return False
 
@@ -95,6 +97,7 @@ class ValidateUser(object):
       return result[0]
     except Exception as e:
       # log
+      logger.exception(str(e))
       return None
 
   def removeAllPermission(self):
@@ -102,6 +105,7 @@ class ValidateUser(object):
       query = "UPDATE %s SET verified=0" %(self.table)
       return self.db.writeOperation(query)
     except Exception as e:
+      logger.exception(str(e))
       return False
 
   def addAllPermission(self):
@@ -109,10 +113,11 @@ class ValidateUser(object):
       query = "UPDATE %s SET verified=1" %(self.table)
       return self.db.writeOperation(query)
     except Exception as e:
+      logger.exception(str(e))
       return False
 
-  def anyPermitted(self):
-    user = self.find("any")
+  def publicPermitted(self):
+    user = self.find("public")
     if user:
       return bool(user[2])
     else:
