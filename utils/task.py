@@ -5,6 +5,7 @@ import random
 import logging
 from config import Config
 from init import getCelery, getDynamodb, getCache, getImageValidator
+from model import DynamoDB
 celery = getCelery()
 cache = getCache()
 image_validator = getImageValidator()
@@ -12,7 +13,6 @@ image_validator = getImageValidator()
 parser = Config().getParser()
 parser.read('config/server.ini')
 logger = logging.getLogger(__name__)
-database = getDynamodb()
 
 import celery.task
 from celery.registry import tasks
@@ -25,14 +25,17 @@ class StoreAllPhotos(celery.task.Task):
 		pass
 
 	def run(self, photos, tag, id=1):
+		database = DynamoDB()
 		for photo in photos['photo']:
 			url = Response.generateMediaURL(photo)
 			try:
-				valid = image_validator.validate(tag, url)
-				if valid == 1 or valid == -1:
-					database.write_item("Pictures", "url", tag=tag, id=id, url=url)
-				else:
-					raise
+				# valid = image_validator.validate(tag, url)
+				# if valid == 1:
+				# 	logger.info(database.write_item("Pictures", "url", tag=tag, id=id, url=url)) 
+				# else:
+				# 	logger.debug("HERE " + str(valid))
+				# 	raise
+				database.write_item("Pictures", "url", tag=tag, id=id, url=url)
 			except:
 				continue
 			id += 1
@@ -65,6 +68,7 @@ class SelectPhotoTask(Task):
 	@staticmethod
 	def get_history(sms):
 		# Get History
+		database = DynamoDB()
 		kce = Key('phone').eq(sms['From'])
 		fe = Attr('tag').eq(sms['body'])
 		history = database.query_user_history(kce, fe)
@@ -73,6 +77,7 @@ class SelectPhotoTask(Task):
 
 	@staticmethod
 	def get_photo(sms, history):
+		database = DynamoDB()
  		cache_photo = SelectPhotoTask.checkCache(SelectPhotoTask.generateCacheKey(sms['body'], history[1] + 1))
 		if cache_photo:
 			logger.critical("CACHE HIT - %s" %cache_photo)
@@ -88,6 +93,7 @@ class SelectPhotoTask(Task):
 
 	@staticmethod
 	def get_photo_history(sms):
+		database = DynamoDB()
 		kce = Key('tag').eq(sms['body'])
 		photo_history = database.query_photo_history(kce)
 		return photo_history
@@ -103,6 +109,7 @@ class SelectPhotoTask(Task):
 	'''
 	@staticmethod
 	def choose_photo(photo_search_client, photo, photo_history, sms, history):
+		database = DynamoDB()
 		if not photo and photo_history['Count'] == 0:
 			# search photo, return first photo, write all to dynamodb (background)
 			logger.critical("Case 1")
@@ -155,6 +162,7 @@ class SelectPhotoTask(Task):
 	@staticmethod
 	def RunNormal(flickr_client, sms):
 		logger.info("Normal task running")
+		database = DynamoDB()
 		try:
 			# Get History
 			history = SelectPhotoTask.get_history(sms)# history object contains: entire history object, id
