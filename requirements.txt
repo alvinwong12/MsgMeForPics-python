@@ -37,7 +37,7 @@ protobuf==3.5.2
 pyasn1==0.4.2
 pyasn1-modules==0.2.1
 pycparser==2.18
-PyJWT==1.5.3
+PyJWT==2.4.0
 pyOpenSSL==17.5.0
 python-dateutil==2.6.1
 python-flickr==0.3.2
